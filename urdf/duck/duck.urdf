@@ -1,0 +1,16 @@
+<robot name="duck">
+    <link name="base_link">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="duck.obj" scale="0.3 0.3 0.3"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="duck.obj" scale="0.3 0.3 0.3"/>
+            </geometry>
+        </collision>
+    </link>
+</robot>
