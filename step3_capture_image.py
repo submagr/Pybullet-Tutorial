@@ -5,21 +5,20 @@ from matplotlib import pyplot as plt
 from utils import step_sim
 from pathlib import Path
 
-image_size = (512, 512)
-focal_length = 1000
-z_near, z_far = 0.01, 10
+IMAGE_SIZE = (512, 512)
+FOCAL_LENGTH = 1000
 
 
-def get_projection_matrix():
-    fovh = (image_size[0] / 2) / focal_length
-    fovh = 180 * np.arctan(fovh) * 2 / np.pi
-    aspect_ratio = image_size[1] / image_size[0]
-    return p.computeProjectionMatrixFOV(fovh, aspect_ratio, z_near, z_far)
+# def get_projection_matrix():
+#     fovh = (IMAGE_SIZE[0] / 2) / FOCAL_LENGTH
+#     fovh = 180 * np.arctan(fovh) * 2 / np.pi
+#     aspect_ratio = IMAGE_SIZE[1] / IMAGE_SIZE[0]
+#     return p.computeProjectionMatrixFOV(45.0, 1.0, Z_NEAR, z_far)
 
 
 def save_img(rgb, d, root_dir):
-    plt.imsave(rgb, root_dir / "rgb.png")
-    plt.imsave(d, root_dir / "d.png")
+    plt.imsave(root_dir / "rgb.png", rgb)
+    plt.imsave(root_dir / "d.png", d, cmap="gray")
 
 
 if __name__ == "__main__":
@@ -34,27 +33,35 @@ if __name__ == "__main__":
         baseOrientation=p.getQuaternionFromEuler([0, 0, 0]),
     )
     step_sim(1e2)  # Let the object settle down
+
     # Setup camera
-    projection_matrix = get_projection_matrix()
+    Z_NEAR, Z_FAR = 0.01, 10
+    # - Camera intrinsics
+    projection_matrix = p.computeProjectionMatrixFOV(
+        fov=45.0,  # Field of view
+        aspect=1.0,  # Aspect ratio
+        nearVal=Z_NEAR,  # Near plane
+        farVal=Z_FAR,  # Far plane
+    )
+    # - Camera extrinsics
     view_matrix = p.computeViewMatrix(
         cameraEyePosition=[2, 2, 2],  # from
         cameraTargetPosition=[0, 0, 0],  # to
         cameraUpVector=[0, 0, 1],
     )
     img_arr = p.getCameraImage(
-        width=image_size[1],
-        height=image_size[0],
+        width=IMAGE_SIZE[1],
+        height=IMAGE_SIZE[0],
         viewMatrix=view_matrix,
         projectionMatrix=projection_matrix,
     )
     w = img_arr[0]
     h = img_arr[1]
-    rgb = img_arr[2]
-    rgb_arr = np.array(rgb, dtype=np.uint8).reshape([h, w, 4])
-    rgb = rgb_arr[:, :, 0:3]
-
-    d = img_arr[3]
-    d = np.array(d).reshape([h, w])
-    d = (2.0 * z_near * z_far) / (z_far + z_near - (2.0 * d - 1.0) * (z_far - z_near))
-
+    # Process RGB
+    rgba_buffer = img_arr[2]
+    rgb = np.array(rgba_buffer, dtype=np.uint8).reshape([h, w, 4])[:, :, :3]
+    # Process Depth
+    z_buffer = img_arr[3]
+    z_buffer = np.array(z_buffer).reshape([h, w])
+    d = (2.0 * Z_NEAR * Z_FAR) / (Z_FAR + Z_NEAR - (2.0 * z_buffer - 1.0) * (Z_FAR - Z_NEAR))
     save_img(rgb, d, Path("images/"))
